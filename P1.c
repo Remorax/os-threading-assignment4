@@ -9,9 +9,20 @@
 #define mysleep(s) usleep(s*1000000)
 
 pthread_mutex_t mutex, mutex2, mutex3;
-pthread_cond_t cond, cond2, cond3, cond4, cond5, cond6;
+pthread_cond_t cond, cond2, cond3, cond4, cond5, cond6, cond7, cond8, cond9, cond10;
 int currentNumber, currentCar, allCarsServed = 0, ongoing=-1;
 int gasStationArray[3];
+
+void pay(int gasStationNo, int id)
+{
+	printf("Car %d is ready to pay to %d\n",id, gasStationNo);
+	if (gasStationNo==1)
+		pthread_cond_signal(&cond7);
+	else if (gasStationNo==2)
+		pthread_cond_signal(&cond8);
+	else
+		pthread_cond_signal(&cond9);
+}
 
 int goToPump(int id, int gasStationNo)
 {
@@ -30,11 +41,12 @@ int goToPump(int id, int gasStationNo)
 		pthread_cond_signal(&cond5);
 	pthread_mutex_lock(&mutex2);
 	pthread_cond_wait(&cond6, &mutex2);
+	pay(gasStationNo,id);
+	pthread_cond_wait(&cond10, &mutex2);
 	pthread_mutex_unlock(&mutex2);
 	pthread_mutex_unlock(&mutex);
-	mysleep(0.5);
-	printf("Car %d is paying\n",id);
 	printf("Car %d's work is now done and it exits gas station %d.\n",id,gasStationNo);
+
 	pthread_mutex_lock(&mutex);
 	gasStationArray[gasStationNo-1] = -1;
 	currentNumber--;
@@ -105,6 +117,12 @@ void serveCar(int attender)
 	return;
 }
 
+void acceptPayment(int attender){
+	printf("Attender %d accepted payment from car %d.\n",attender, currentCar);
+	mysleep(0.5);	
+	return;
+}
+
 void* idleAttender1()
 {
 	printf("Attender 1 has been created and is dreaming about having his own car\n");
@@ -116,6 +134,9 @@ void* idleAttender1()
 		ongoing = -1;
 		pthread_cond_broadcast(&cond6);
 		printf("Attender 1 has finished his service and is dreaming again\n");
+		pthread_cond_wait(&cond7, &mutex2);
+		acceptPayment(1);
+		pthread_cond_signal(&cond10);
 		pthread_mutex_unlock(&mutex2);
 	}
 	printf("Exiting1....\n");
@@ -133,6 +154,9 @@ void* idleAttender2()
 		ongoing = -1;
 		pthread_cond_broadcast(&cond6);
 		printf("Attender 2 has finished his service and is dreaming again\n");
+		pthread_cond_wait(&cond8, &mutex2);
+		acceptPayment(2);
+		pthread_cond_signal(&cond10);
 		pthread_mutex_unlock(&mutex2);
 	}
 	printf("Exiting2....\n");
@@ -150,6 +174,9 @@ void* idleAttender3()
 		printf("Attender 3 has finished his service and is dreaming again\n");
 		ongoing = -1;
 		pthread_cond_broadcast(&cond6);
+		pthread_cond_wait(&cond9, &mutex2);
+		acceptPayment(3);
+		pthread_cond_signal(&cond10);
 		pthread_mutex_unlock(&mutex2);
 	}
 	printf("Exiting3....\n");
@@ -177,6 +204,10 @@ int main()
     pthread_cond_init(&cond4, NULL);
     pthread_cond_init(&cond5, NULL);
     pthread_cond_init(&cond6, NULL);
+    pthread_cond_init(&cond7, NULL);
+    pthread_cond_init(&cond8, NULL);
+    pthread_cond_init(&cond9, NULL);
+    pthread_cond_init(&cond10, NULL);
 
 	int indexes[numberOfThreads];
 
